@@ -1,52 +1,85 @@
-import type { PostMessage, PostMessageDataRequest } from "$lib/message-types"
 import { BskyAgent, type AtpSessionData } from "@atproto/api"
-import { writable } from "svelte/store"
+let sessionCache: AtpSessionData | undefined
 
-const _session = writable<AtpSessionData | null>(null)
+const agent = new BskyAgent({
+  service: "https://bsky.social",
+  persistSession: (_, sess) => {
+    if (sess) sessionCache = sess
+  },
+})
+
 onmessage = ({ data: { data, msg } }) => {
-  const agent = new BskyAgent({
-    service: "https://bsky.social",
-    //   persistSession: persistSession,
-  })
+  console.debug("Incoming msg: ", msg, data)
 
-  console.log(msg, data)
+  switch (msg) {
+    case "attempt":
+      // Attempt to login from saved data
+      if (sessionCache) {
+        console.log('Logged In')
+        postMessage({
+          msg,
+          data: { success: true, handle: sessionCache.handle },
+        })
+      } else {
+        postMessage({
+          msg,
+          data: { success: false },
+        })
+      }
+      break
 
-  if (msg === "login") {
-    // if (!data.identifier || !data.password) return
-    console.debug('logging in')
-    login(data.identifier, data.password, agent).then((res) => {
-      if (res?.success && res?.data) {
-        _session.set(res.data)
-        postMessage({ msg: "success", data: res.data })
-      } else postMessage({ msg: "error", data: res.error })
-    })
-  } else {
-    const message: PostMessage<PostMessageDataRequest> = {
-      msg: "requiem pt.1",
-      data: { text: "got a brother in the cut, bring the wood out" },
-    }
-    return postMessage(message)
+    case "login":
+      login(data.identifier, data.password, agent)
+        .then(async (data) => {
+          sessionCache = data
+          console.log("welcome: ", data.handle)
+
+          postMessage({
+            msg,
+            data: { success: true, handle: sessionCache?.handle },
+          })
+        })
+        .catch((error) => postMessage({ msg: "error", data: error }))
+      break
+
+    case "check":
+      false
+      break
+
+    case "feed":
+      break
+
+    case "refresh":
+      break
+
+    default:
+      break
+  }
+
+  function getFeed() {
+    return agent
+      .getTimeline({ limit: 50 })
+      .then((res) => {
+        return { ...res.data }
+      })
+      .catch((err) => console.error("failed to retreive timeline", err))
   }
 }
 
-export const login = async (
-  identifier: string,
-  password: string,
-  agent: BskyAgent
-) => {
-  try {
-    console.log('begin try')
-    const { success, data } = await agent.login({
-      identifier,
-      password,
-    })
-    if (success) {
-      return { success: true, data }
-    }
-  } catch (error) {
-    console.error(error)
-    return { success: false, error }
+async function login(identifier: string, password: string, agent: BskyAgent) {
+  // try {
+  const res = await agent.login({
+    identifier,
+    password,
+  })
+  if (res.success) {
+    return res.data
   }
+  throw new Error("failure")
+  /*} catch (error) {
+      console.error(error)
+      return error
+    }*/
 }
 
 export {}
