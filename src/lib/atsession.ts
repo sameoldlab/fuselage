@@ -1,18 +1,34 @@
 import { BskyAgent } from "@atproto/api"
-import type { AtpSessionData } from "@atproto/api"
+import type { AtpSessionData, AtpPersistSessionHandler } from "@atproto/api"
 import { writable } from "svelte/store"
+export const ssr = false 
+export const agent = writable<BskyAgent | null>(null)
 
-// const persistSession: AT.AtpPersistSessionHandler = (_, ses) => {}
-export const agent = new BskyAgent({ service: "https://bsky.social" })
-
+const persistSession: AtpPersistSessionHandler = (_, sess) =>
+  localStorage.setItem("BskySession", JSON.stringify(sess))
 
 export const session = writable<AtpSessionData | null>(null)
 
-// Hoping bluesky figures out auth, before I need to do JWTs. Only way to use till then is fork  and change env variables 
-const { success, data } = await agent.login({
-  identifier: import.meta.env.VITE_ID,
-  password: import.meta.env.VITE_PASSWD,
-})
-
-if (success) session.set(data)
-
+// :D
+export const login = async (
+  identifier: string,
+  password: string,
+) => {
+  const _agent = new BskyAgent({
+    service: "https://bsky.social",
+    persistSession: persistSession,
+  })
+  try {
+    const { success, data } = await _agent.login({
+      identifier,
+      password,
+    })
+    if (success) {
+      agent.set(_agent)
+      return { success: true, data }
+    }
+  } catch (error) {
+    console.error(error)
+    return { success: false, error}
+  }
+}

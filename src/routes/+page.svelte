@@ -9,31 +9,44 @@
   /**
    * Handles of all followed authors on my skyline
    */
-  let authors = new Set(
-      feed
-        ?.filter((data) => !data.reason)
-        .map((data) => data.post.author.handle)
-    )
-  
 
-  console.log(authors)
+  let authors = {
+    name: "default",
+    set: [
+      ...new Set(
+        feed
+          ?.filter((data) => !data.reason)
+          .map((data) => data.post.author.handle)
+      ),
+    ],
+  }
+
+  //   console.log(authors)
 
   /** Filters authors to be displayed */
-  let filter = new Set(authors) // these are apparently pointers not copies
+  let filter = new Set(authors.set) // these are apparently pointers not copies
 
   function editFilter(handle: string) {
     {
-          if (filter.has(handle)) {
-            filter.delete(handle)
-            filter = filter
-            console.log(authors)
-        } else {
-            filter.add(handle)
-            filter = filter
-            console.log(authors)
-        }
-        }
+      if (filter.has(handle)) {
+        filter.delete(handle)
+        filter = filter
+      } else {
+        filter.add(handle)
+        filter = filter
+      }
+    }
   }
+
+  let filterTitle = ""
+  function createFilter() {
+    if (filterTitle === "") return
+    const filterSet = authors
+    authors.push(filterSet)
+    // authors.add(filterTitle)
+    authors = authors
+  }
+
   /* 
             {uri: 'at://did:plc:mxdlsmrzuki6rzn4nrx6rif3/app.bsky.feed.post/3jtjtfskbez2z', cid: 'bafyreibkkz25ewkyryqtny6avonufums2trrv6um5yusmixhg3hp5my22y', author: {…}, record: {…}, embed: {…}, …}
         author:
@@ -76,7 +89,7 @@
 </script>
 
 <div class="sidepane">
-  {#each [...authors] as handle }
+  {#each authors.set as handle}
     <div class="cube">
       <button
         on:click={() => editFilter(handle)}
@@ -84,13 +97,17 @@
       >
     </div>
   {/each}
+  <div>
+    <input type="text" bind:value={filterTitle} />
+    <button on:click={createFilter}>Save</button>
+  </div>
 </div>
 
 <main class="container">
   <section class="posts">
     {#if feed}
       <!-- {#each feed as { post, reason, reply }, id} -->
-      {#each feed.filter((d) =>  filter.has(d.post.author.handle)) as { post, reason, reply }, id}
+      {#each feed.filter( (d) => filter.has(d.post.author.handle) ) as { post, reason, reply }, id}
         <!-- Only show original posts -->
         {#if true}
           <div class="post">
@@ -136,12 +153,7 @@
 </main>
 
 <style lang="scss">
-  :root {
-    background-color: #0f0f0f;
-    color: white;
-    font-family: "Fira Sans", Ubuntu, "Gill Sans", "Gill Sans MT", Calibri,
-      "Trebuchet MS", sans-serif;
-  }
+
   .container {
     margin-left: 20vw;
     display: flex;
@@ -155,26 +167,27 @@
     flex-direction: column;
     gap: 0.5rem;
   }
-  .cube {
-    button {
-      opacity: 0.7;
-      padding: .25rem .5rem;
-      border: none;
-      color: inherit;
-      background: inherit;
-      font-size: 1rem;
-      border-radius: 4px;
-      &.selected {
-        opacity: 1;
-        font-weight: 600;
-        background-color: #333; //meant to be a test but lowkey vibing
-      }
-      &:hover {
-        cursor: pointer;
-        background-color: red; //meant to be a test but lowkey vibing
-      }
+  //   .cube {
+  button {
+    opacity: 0.7;
+    padding: 0.25rem 0.5rem;
+    border: none;
+    color: var(--text);
+    background: var(--bg);
+    font-size: 1rem;
+    border-radius: 4px;
+
+    &.selected {
+      opacity: 1;
+      font-weight: 600;
+      background-color: #75969060 ; //meant to be a test but lowkey vibing
+    }
+    &:hover {
+      cursor: pointer;
+      background-color: red; //meant to be a test but lowkey vibing
     }
   }
+  //   }
 
   p {
     font-size: 1.125rem;
