@@ -2,7 +2,9 @@
 </script>
 
 <slot />
-
+<svelte:head>
+    <title>Fuselage</title>
+</svelte:head>
 <style lang="scss">
   :root {
     --text: white;
