@@ -1,24 +1,42 @@
 import { BskyAgent, type AtpSessionData } from "@atproto/api"
-let sessionCache: AtpSessionData | undefined
 
+let _session: AtpSessionData | undefined
 const agent = new BskyAgent({
   service: "https://bsky.social",
   persistSession: (_, sess) => {
-    if (sess) sessionCache = sess
+    _session = sess
   },
 })
 
-onmessage = ({ data: { data, msg } }) => {
-  console.debug("Incoming msg: ", msg, data)
+onmessage = async ({ data: { data, msg } }) => {
+  console.debug("Incoming request: ", msg)
 
+  /*
+    To login to different services:
+    need to set agent service 
+    if(!_session || msg !== 'login) return
+    if !session or msg !== login RETURN
+        just use var???
+    if (result == success) create _session 
+    
+    POST result
+
+    if (_session) {
+        everything else
+    }
+
+
+
+  */
   switch (msg) {
     case "attempt":
       // Attempt to login from saved data
-      if (sessionCache) {
-        console.log('Logged In')
+      // TODO: impl localdb
+      if (_session) {
+        console.log("Logged In")
         postMessage({
           msg,
-          data: { success: true, handle: sessionCache.handle },
+          data: { success: true, handle: _session.handle },
         })
       } else {
         postMessage({
@@ -29,24 +47,44 @@ onmessage = ({ data: { data, msg } }) => {
       break
 
     case "login":
-      login(data.identifier, data.password, agent)
+      login(data.identifier, data.password)
         .then(async (data) => {
-          sessionCache = data
-          console.log("welcome: ", data.handle)
-
           postMessage({
             msg,
-            data: { success: true, handle: sessionCache?.handle },
+            data: { success: true, handle: data?.handle },
           })
         })
         .catch((error) => postMessage({ msg: "error", data: error }))
       break
 
     case "check":
-      false
       break
 
     case "feed":
+      console.debug("fetching timeline")
+      getFeed()
+        .then((res) => {
+          console.log("Return: ", res)
+          postMessage({
+            msg,
+            data: {
+              success: true,
+              feed: res.feed,
+              cursor: res.cursor,
+            },
+          })
+        })
+        .catch((error) => {
+          console.log(error)
+          postMessage({
+            msg,
+            data: {
+              success: false,
+              error,
+            },
+          })
+        })
+
       break
 
     case "refresh":
@@ -55,18 +93,16 @@ onmessage = ({ data: { data, msg } }) => {
     default:
       break
   }
-
-  function getFeed() {
-    return agent
-      .getTimeline({ limit: 50 })
-      .then((res) => {
-        return { ...res.data }
-      })
-      .catch((err) => console.error("failed to retreive timeline", err))
-  }
 }
 
-async function login(identifier: string, password: string, agent: BskyAgent) {
+function getFeed() {
+  return agent.getTimeline({ limit: 50 }).then((res) => {
+    console.log("returning data timeline")
+    return { ...res.data }
+  })
+}
+
+async function login(identifier: string, password: string) {
   // try {
   const res = await agent.login({
     identifier,
@@ -75,11 +111,6 @@ async function login(identifier: string, password: string, agent: BskyAgent) {
   if (res.success) {
     return res.data
   }
-  throw new Error("failure")
-  /*} catch (error) {
-      console.error(error)
-      return error
-    }*/
 }
 
 export {}

@@ -1,19 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte"
-  import { createEventDispatcher } from 'svelte';
-
-  const dispatch = createEventDispatcher();
-
-  function startSession() {
-    dispatch('session', {
-        text: 'echo'
-    })
-    console.log("sent event")
-
-  }  
-
-
-  let syncWorker: Worker | undefined = undefined
+  export let worker: Worker
 
   type FormError = {
     missing?: bool
@@ -22,41 +8,13 @@
 
   let formError: FormError
 
-  const onWorkerMessage = ({ data: { msg, data } }) => {
-    if (msg === "login") {
-      console.log("welcome", data)
-      startSession()
-
-    } else if (msg === "attempt") {
-      if (data.sucess) {
-        console.log("welcome", data)
-        startSession()
-      }
-    }
-  }
-
-  const loadWorker = async () => {
-    const SyncWorker = await import("$lib/worker?worker")
-    syncWorker = new SyncWorker.default()
-
-    syncWorker.onmessage = onWorkerMessage
-
-    const message = {
-      msg: "attempt",
-      data: { text: "init" },
-    }
-    syncWorker.postMessage(message)
-  }
-
-  onMount(loadWorker)
-
   let service: string,
     identifier: string,
-    password = "",
+    password: string,
     loggingIn = false
 
   const login = () => {
-    syncWorker?.postMessage({ msg: "login", data: { identifier, password } })
+    worker.postMessage({ msg: "login", data: { identifier, password } })
   }
 </script>
 
@@ -65,12 +23,11 @@
 {:else}
   <div class="container">
     <p id="photocred">
-      <!-- Who tryna get sublicenced?? 👉👈 pls contact ibro.xyz on bsky -->
       Photo by
       <a
         href="https://unsplash.com/@pueblovista?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText"
       >
-        Paul Pastourmatzis
+        Paul Pastourmatzis <!-- Who tryna get sublicenced?? 👉👈 pls contact ibro.xyz on bsky -->
       </a>
     </p>
 
@@ -82,6 +39,7 @@
           <input
             type="text"
             name="identifier"
+            autocomplete="username"
             bind:value={identifier}
             placeholder="example.bsky.social"
             required
@@ -93,6 +51,7 @@
           <input
             name="password"
             type="password"
+            autocomplete="current-password"
             bind:value={password}
             required
           /></label
@@ -107,7 +66,7 @@
           > to keep your account safe
         </p>
       </form>
-      <button on:click={() => syncWorker?.postMessage({ msg: "attempt" })}
+      <button on:click={() => worker.postMessage({ msg: "attempt" })}
         >Check session</button
       >
       <!-- {#if form?.success} Success {/if} -->
@@ -122,7 +81,7 @@
     height: 100vh;
     min-height: -webkit-fill-available;
     display: flex;
-    background: url("login-bg.jpg") center center no-repeat;
+    background: url("$lib/login-bg.jpg") center center no-repeat;
     background-size: cover;
   }
   main {

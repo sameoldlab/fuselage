@@ -1,50 +1,46 @@
 <script lang="ts">
-  import { onMount } from "svelte"
   import Login from "./Login.svelte"
   import Feed from "./Feed.svelte"
 
-  let session = false
+  const worker = new Worker(new URL("$lib/worker.ts", import.meta.url), {
+    type: "module",
+  })
 
-  let syncWorker: Worker | undefined = undefined
+  let session = false
+  let initFeed = undefined
+
   const onWorkerMessage = ({ data: { msg, data } }: MessageEvent) => {
     if (msg === "attempt") {
       if (data.sucess) {
         console.log("welcome", data)
         session = true
       }
-    } else console.error(msg, data)
+    }
+    if (msg === "feed") {
+      if (data.success) {
+        initFeed = data.feed
+        console.log("feed loaded: \n", initFeed)
+      }
+    } else if (msg === "login") {
+      console.log("welcome", data)
+      session = true
+      const message = { msg: "feed" }
+      worker.postMessage(message)
+    } else {
+      session = false
+      console.error(msg, data)
+    }
   }
+  worker.onmessage = onWorkerMessage
 
-  const loadWorker = async () => {
-    const SyncWorker = await import("$lib/worker?worker")
-    syncWorker = new SyncWorker.default()
-
-    syncWorker.onmessage = onWorkerMessage
-
-    const message = {msg: "attempt"}
-    syncWorker.postMessage(message)
-  }
-  onMount(loadWorker)
-  $: if(session) {
-    console.log("loggedin")
-}
-    
-
-  async function loadFeed() {
-    const message = {msg: "feed"}
-    syncWorker?.postMessage(message)
-  }
-  function handleSession(){
-    // loadFeed();
-    const message = {msg: "feed"}
-    syncWorker?.postMessage(message)
-    session = true
-  }
 </script>
 
-{session}
 {#if session}
-  <Feed />
+  {#if initFeed}
+    <Feed init={initFeed} {worker}/>
+  {:else}
+    Loading Feed...
+  {/if}
 {:else}
-  <Login on:session={handleSession}/>
+  <Login {worker} />
 {/if}
