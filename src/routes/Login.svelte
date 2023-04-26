@@ -81,7 +81,7 @@
     height: 100vh;
     min-height: -webkit-fill-available;
     display: flex;
-    background: url("$lib/login-bg.jpg") center center no-repeat;
+    background: url("$lib/login-bg.webp") center center no-repeat;
     background-size: cover;
   }
   main {
