@@ -50,6 +50,7 @@
           Password
           <input
             name="password"
+            id="current-password"
             type="password"
             autocomplete="current-password"
             bind:value={password}
