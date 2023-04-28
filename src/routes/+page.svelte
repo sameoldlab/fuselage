@@ -1,13 +1,14 @@
 <script lang="ts">
   import Login from "./Login.svelte"
   import Feed from "./Feed.svelte"
+  import type { FeedViewPost } from "@atproto/api/dist/client/types/app/bsky/feed/defs"
 
   const worker = new Worker(new URL("$lib/worker.ts", import.meta.url), {
     type: "module",
   })
 
   let session = false
-  let initFeed = undefined
+  let initFeed: FeedViewPost[] | undefined
 
   const onWorkerMessage = ({ data: { msg, data } }: MessageEvent) => {
     if (msg === "attempt") {
@@ -32,12 +33,11 @@
     }
   }
   worker.onmessage = onWorkerMessage
-
 </script>
 
 {#if session}
   {#if initFeed}
-    <Feed init={initFeed} {worker}/>
+    <Feed init={initFeed} {worker} />
   {:else}
     Loading Feed...
   {/if}

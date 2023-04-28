@@ -1,5 +1,15 @@
 import { BskyAgent, type AtpSessionData } from "@atproto/api"
 
+import Graphemer from "graphemer"
+const splitter = new Graphemer()
+globalThis.Intl = globalThis.Intl || {}
+globalThis.Intl.Segmenter =
+  globalThis.Intl.Segmenter ||
+  class Segmenter {
+    constructor() {}
+    segment = splitter.iterateGraphemes
+  }
+
 let _session: AtpSessionData | undefined
 const agent = new BskyAgent({
   service: "https://bsky.social",
@@ -10,7 +20,7 @@ const agent = new BskyAgent({
 
 onmessage = async ({ data: { data, msg } }) => {
   console.debug("Incoming request: ", msg)
-
+  agent.service = new URL("https://sdf.adfa.com")
   /*
     To login to different services:
     need to set agent service 

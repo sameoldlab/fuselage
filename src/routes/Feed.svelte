@@ -1,12 +1,30 @@
 <script lang="ts">
   import type { FeedViewPost } from "@atproto/api/dist/client/types/app/bsky/feed/defs"
+  import { onDestroy } from "svelte"
 
   export let worker: Worker
   export let init
 
   let feed = init as FeedViewPost[]
-  console.log(feed)
-  //NEED to get my types back.
+  //   console.log(feed)
+  let cursor: string
+
+  worker.onmessage = ({ data: { msg, data } }) => {
+    if (msg !== "feed") console.error(data)
+    if (data.success && cursor !== data.cursor) {
+      cursor = data.cursor
+      feed = data.feed
+      // data.feed.forEach()
+      console.log("feed refreshed: \n", data.cursor)
+    }
+  }
+
+  const clear = setInterval(() => {
+    console.log("Requesting update")
+    worker.postMessage({ msg: "feed" })
+  }, 1000 * 60)
+
+  onDestroy(() => clearInterval(clear))
 
   /**
    * Handles of all followed authors on my skyline
@@ -25,9 +43,14 @@
   /** Filters authors to be displayed */
   let filter = new Set(authors.set) // these are apparently pointers not copies
 
-  function editFilter(handle: string) {
+  function editFilter(handle: string, event: MouseEvent) {
     {
-      if (filter.has(handle)) {
+      if (event.altKey) {
+        console.log("alt")
+      }
+      if (event.ctrlKey) console.log("ctrl")
+      if (event.shiftKey) console.log("shift")
+      else if (filter.has(handle)) {
         filter.delete(handle)
         filter = filter
       } else {
@@ -91,7 +114,7 @@
   {#each authors.set as handle}
     <div class="cube">
       <button
-        on:click={() => editFilter(handle)}
+        on:click={(e) => {editFilter(handle, e)}}
         class:selected={filter.has(handle)}>{handle}</button
       >
     </div>
@@ -135,7 +158,8 @@
               {post.author.displayName}
             </span>
             <!-- <span class="handle"> @{post.author.handle}</span> -->
-            <p>{post.record.text}</p>
+            <!-- <p>{(post.record.text)}</p> -->
+            <!-- <p>{(post.record.text)}</p> -->
             {#if post.embed?.images}
               {#each post.embed?.images as img}
                 <img src={img.thumb} alt={img.alt} />
